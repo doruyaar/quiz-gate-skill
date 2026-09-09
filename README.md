@@ -2,7 +2,7 @@
 
 An Agent Skill for Cursor and Claude Code that treats human understanding as a release criterion.
 
-Before implementing a non-trivial change, the agent first explains the solution it has decided on: a full implementation plan covering behavior, responsibilities, control flow, tradeoffs, and failure modes. That plan is how the developer learns the design. Only after that explanation does the agent quiz them with multiple-choice questions about invariants, responsibilities, failure modes, and the change surface of likely future requirements. The agent stays read-only until the developer passes.
+Before implementing a non-trivial change, the agent first replies with the full decided plan — behavior, responsibilities, control flow, tradeoffs, and failure modes — and stops. That chat reply is how the developer learns the design. Only after they have read it and continued does the agent open the quiz UI. Do not put the plan and the quiz in the same turn; the question widget hides the explanation. The agent stays read-only until the developer passes.
 
 Both tools read the same `SKILL.md` format from the same directory layout, so one copy of `quiz-gate/` works in either.
 

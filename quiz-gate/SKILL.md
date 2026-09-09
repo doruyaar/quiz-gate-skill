@@ -10,7 +10,7 @@ Treat human understanding as a release criterion.
 
 The agent may inspect files, investigate the codebase, ask clarifying questions, and design a solution before the gate.
 
-The developer learns the solution from the plan, not from the quiz. Present the full decided plan first; open the quiz only after that explanation.
+The developer learns the solution from the plan, not from the quiz. The plan must appear as a finished chat reply before any quiz UI. Calling the question tool in the same turn hides the explanation.
 
 The agent must not edit files, run mutating commands, or begin implementation until the developer passes the Quiz Gate.
 
@@ -28,7 +28,13 @@ Skip the gate for:
 
 Inspect the relevant code and requirements. Decide the solution, then explain that decision to the developer in a complete implementation plan. This is the teaching step.
 
-The plan is how the developer gains the knowledge the quiz will require. Do not open the quiz until the full plan has been presented. Do not treat the quiz as the explanation.
+The plan is how the developer gains the knowledge the quiz will require. Do not treat the quiz as the explanation.
+
+**Hard split:** the turn that teaches the plan must not call `AskQuestion`, `AskUserQuestion`, or any other question UI. Write the full plan as the user-visible reply, then stop. Opening the quiz in that same turn replaces the plan with the question widget.
+
+End the teaching turn by saying the quiz comes next once they have read the plan. A short `ok`, `ready`, or equivalent is enough. Do not open the quiz until the developer continues.
+
+Do not promise the plan in a thought or status line and then invoke the quiz. The plan is not taught until it is visible in the chat.
 
 Present a concise implementation plan covering:
 
@@ -50,7 +56,9 @@ The quiz must test the agreed solution that was just taught. Do not test unstate
 
 ## 2. Open the Quiz Gate
 
-After the developer has the full plan, create an adaptive multiple-choice quiz:
+Open the quiz only in a later turn, after the developer has continued from the plan in section 1. Never combine the first presentation of the plan with the question UI.
+
+Create an adaptive multiple-choice quiz:
 
 - Use 5 questions for a localized change.
 - Use 8 questions for a multi-component feature.
@@ -201,8 +209,8 @@ If implementation reveals a material architectural change:
 
 1. Pause before making that change.
 2. Explain why the original plan must change.
-3. Present the proposed delta. That explanation is how the developer learns the new decision.
-4. Open a small Delta Quiz Gate containing 1–3 questions about the new decision.
+3. Present the proposed delta as a finished chat reply, without opening a quiz in that turn. That explanation is how the developer learns the new decision.
+4. After the developer continues, open a small Delta Quiz Gate containing 1–3 questions about the new decision.
 5. Continue only after the delta is passed.
 
 Do not reopen the gate for minor implementation details that do not change the developer's mental model of the system.
