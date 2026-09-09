@@ -10,6 +10,8 @@ Treat human understanding as a release criterion.
 
 The agent may inspect files, investigate the codebase, ask clarifying questions, and design a solution before the gate.
 
+The developer learns the solution from the plan, not from the quiz. Present the full decided plan first; open the quiz only after that explanation.
+
 The agent must not edit files, run mutating commands, or begin implementation until the developer passes the Quiz Gate.
 
 ## 0. Scope check
@@ -22,9 +24,11 @@ Skip the gate for:
 - requests limited to explanation, research, or review;
 - work covered by a gate the developer already passed in this session, unless the plan has materially changed.
 
-## 1. Establish the proposed solution
+## 1. Teach the proposed solution
 
-Inspect the relevant code and requirements.
+Inspect the relevant code and requirements. Decide the solution, then explain that decision to the developer in a complete implementation plan. This is the teaching step.
+
+The plan is how the developer gains the knowledge the quiz will require. Do not open the quiz until the full plan has been presented. Do not treat the quiz as the explanation.
 
 Present a concise implementation plan covering:
 
@@ -38,13 +42,15 @@ Present a concise implementation plan covering:
 - testing and observability;
 - deployment, migration, or rollback consequences when relevant.
 
+Write the plan so a developer who reads it can own the change: they should be able to reason about responsibilities, failure modes, and likely future modification without guessing unstated details.
+
 Resolve material ambiguities before opening the gate.
 
-The quiz must test the agreed solution. Do not test unstated assumptions, arbitrary implementation details, or decisions that have not been explained to the developer.
+The quiz must test the agreed solution that was just taught. Do not test unstated assumptions, arbitrary implementation details, or decisions that have not been explained to the developer.
 
 ## 2. Open the Quiz Gate
 
-Create an adaptive multiple-choice quiz:
+After the developer has the full plan, create an adaptive multiple-choice quiz:
 
 - Use 5 questions for a localized change.
 - Use 8 questions for a multi-component feature.
@@ -54,11 +60,24 @@ Create an adaptive multiple-choice quiz:
 - Randomize the position of correct answers.
 - Do not reveal the answers before submission.
 
-Ask all questions in one numbered batch.
+Present every question through the host's structured question UI so the developer selects options instead of typing letter codes:
 
-Request answers in a compact format such as:
+- Cursor: `AskQuestion`
+- Claude Code: `AskUserQuestion`
 
-`1B 2D 3A 4C 5B`
+Do not ask for answers in forms such as `1B 2D 3A`. Do not list A/B/C/D as the choices the developer is meant to type.
+
+Map the quiz onto the tool:
+
+- One question object per quiz item, single-select.
+- Four options whose visible text is the choice itself, not a letter.
+- Do not add an Other option; the host may append one.
+- Do not mark, recommend, or otherwise distinguish the correct option.
+- On Claude Code, use a short `header` chip and put any extra option detail in `description` if the label must stay short.
+
+If the host limits how many questions may be sent in one call, send the rest in follow-up calls. Do not grade, hint, or comment on correctness until every question has an answer.
+
+If the structured question tool is unavailable, present the same options in chat and accept a plain-language selection. Still do not require letter codes.
 
 Tell the developer how many questions there are, but do not reveal the distribution of correct answers.
 
@@ -105,7 +124,7 @@ Do not ask about parts of the system that the proposed change does not affect.
 
 Grade answers against the agreed plan and repository evidence, not merely the agent's preferred design.
 
-If the submission is incomplete or malformed, ask the developer to resubmit the missing items before grading. Do not infer unanswered questions.
+If a question is skipped, answered with Other, or otherwise incomplete, re-ask the missing items before grading. Do not infer unanswered questions.
 
 ### Passing
 
@@ -122,7 +141,7 @@ If any answer is incorrect:
 1. State `Quiz Gate: BLOCKED`.
 2. Identify the misunderstood concept.
 3. Explain that concept briefly.
-4. Ask a new multiple-choice question testing the same concept through a different scenario.
+4. Ask a new multiple-choice question through the same structured question UI, testing the same concept through a different scenario.
 5. Do not repeat the original wording.
 
 Continue targeted remediation until every tested concept has been answered correctly at least once.
@@ -182,7 +201,7 @@ If implementation reveals a material architectural change:
 
 1. Pause before making that change.
 2. Explain why the original plan must change.
-3. Present the proposed delta.
+3. Present the proposed delta. That explanation is how the developer learns the new decision.
 4. Open a small Delta Quiz Gate containing 1–3 questions about the new decision.
 5. Continue only after the delta is passed.
 

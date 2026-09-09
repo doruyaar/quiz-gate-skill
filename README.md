@@ -2,7 +2,7 @@
 
 An Agent Skill for Cursor and Claude Code that treats human understanding as a release criterion.
 
-Before implementing a non-trivial change, the agent presents an implementation plan, then quizzes the developer on it with multiple-choice questions about invariants, responsibilities, failure modes, and the change surface of likely future requirements. The agent stays read-only until the developer passes.
+Before implementing a non-trivial change, the agent first explains the solution it has decided on: a full implementation plan covering behavior, responsibilities, control flow, tradeoffs, and failure modes. That plan is how the developer learns the design. Only after that explanation does the agent quiz them with multiple-choice questions about invariants, responsibilities, failure modes, and the change surface of likely future requirements. The agent stays read-only until the developer passes.
 
 Both tools read the same `SKILL.md` format from the same directory layout, so one copy of `quiz-gate/` works in either.
 
@@ -48,7 +48,7 @@ Remove that frontmatter line if you want the agent to apply the gate on its own 
 | Multi-component feature | 8 |
 | Architectural, security-sensitive, or high-risk | up to 12 |
 
-Answer in compact form, for example `1B 2D 3A 4C 5B`. Every answer must be correct to pass. An incorrect answer blocks the gate and triggers a short explanation plus a fresh question on the same concept, phrased through a different scenario.
+The agent asks the quiz through Cursor's `AskQuestion` or Claude Code's `AskUserQuestion` UI. Select an option for each question; do not type letter codes. Every answer must be correct to pass. An incorrect answer blocks the gate and triggers a short explanation plus a fresh question on the same concept, phrased through a different scenario.
 
 ## Portability note
 
