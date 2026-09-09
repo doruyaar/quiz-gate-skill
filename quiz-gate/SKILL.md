@@ -10,7 +10,9 @@ Treat human understanding as a release criterion.
 
 The agent may inspect files, investigate the codebase, ask clarifying questions, and design a solution before the gate.
 
-The developer learns the solution from the plan, not from the quiz. The plan must appear as a finished chat reply before any quiz UI. Calling the question tool in the same turn hides the explanation.
+The developer learns the solution from the plan, not from the quiz. Write the complete plan as visible text, then open the quiz in that same reply.
+
+**The plan and the quiz are one turn.** Writing the plan and ending the turn is a failed gate, even if the plan is excellent. The developer should never have to ask for the quiz, say `ready`, or send any message between reading the plan and answering the first question. If you are about to end a turn whose last content is plan text, you are not done: call the question tool now.
 
 The agent must not edit files, run mutating commands, or begin implementation until the developer passes the Quiz Gate.
 
@@ -26,37 +28,29 @@ Skip the gate for:
 
 ## 1. Teach the proposed solution
 
-Inspect the relevant code and requirements. Decide the solution, then explain that decision to the developer in a complete implementation plan. This is the teaching step.
+Inspect the relevant code and requirements, decide the solution, then explain that decision to the developer. This is the teaching step.
+
+Explain it the way you would explain it anyway. The plan the developer reads here is the same plan you would write for this change without the gate: what you are going to do, how it works, why you chose it over the alternative you weighed. Quiz Gate does not ask for a different kind of document, and it does not add sections. It only requires that the explanation exists as visible text before the quiz opens.
+
+Let the change decide the depth. A localized change is a few paragraphs. An architectural one needs the reasoning behind the structure, how it behaves when something fails, and what it costs to operate. Say what is actually load-bearing for this change and leave out what is not; a plan padded to satisfy a checklist teaches less than a short one that names the real decisions.
 
 The plan is how the developer gains the knowledge the quiz will require. Do not treat the quiz as the explanation.
 
-**Hard split:** the turn that teaches the plan must not call `AskQuestion`, `AskUserQuestion`, or any other question UI. Write the full plan as the user-visible reply, then stop. Opening the quiz in that same turn replaces the plan with the question widget.
+**Write the plan out before calling the question tool, and call the question tool before ending the turn.** Both halves matter. Emit the entire plan as visible chat text, then open the quiz on the way out of the same turn. The developer reads down the plan and answers immediately, with no round trip in between.
 
-End the teaching turn by saying the quiz comes next once they have read the plan. A short `ok`, `ready`, or equivalent is enough. Do not open the quiz until the developer continues.
+A status line such as "here is the full plan" is not the plan. If the question tool is called before the plan text is written, the developer sees only the question widget and the explanation is lost.
 
-Do not promise the plan in a thought or status line and then invoke the quiz. The plan is not taught until it is visible in the chat.
+The last thing that happens in this turn is the question tool call. Not a summary, not a closing line, and above all not a handoff. Do not write anything resembling "let me know when you have read it", "ready for the quiz?", "say ok and I will start", or "next I will quiz you" — every one of those turns the gate into an extra round trip the developer has to initiate, which is exactly what this step exists to avoid. Announcing the quiz is not opening it.
 
-Present a concise implementation plan covering:
+Long plans do not change this. Finishing a substantial explanation feels like a natural stopping point; it is not one here. The turn ends when the questions are on screen.
 
-- intended behavior and scope;
-- affected components and their responsibilities;
-- control flow and data flow;
-- important design choices;
-- significant alternatives that were rejected and why;
-- failure modes and recovery behavior;
-- security, concurrency, privacy, or data-integrity risks;
-- testing and observability;
-- deployment, migration, or rollback consequences when relevant.
+Resolve material ambiguities before opening the gate. Once the plan is written, there is nothing left to wait for.
 
-Write the plan so a developer who reads it can own the change: they should be able to reason about responsibilities, failure modes, and likely future modification without guessing unstated details.
-
-Resolve material ambiguities before opening the gate.
-
-The quiz must test the agreed solution that was just taught. Do not test unstated assumptions, arbitrary implementation details, or decisions that have not been explained to the developer.
+The one thing the plan must satisfy: a developer who reads it, and nothing else, can answer every question in the quiz and then own the change. If a question would test something the plan never said, either say it in the plan or drop the question. Do not test unstated assumptions, arbitrary implementation details, or decisions that have not been explained to the developer.
 
 ## 2. Open the Quiz Gate
 
-Open the quiz only in a later turn, after the developer has continued from the plan in section 1. Never combine the first presentation of the plan with the question UI.
+Open the quiz in the same turn as the plan, directly after the plan text, without waiting for the developer to respond or ask for it.
 
 Create an adaptive multiple-choice quiz:
 
@@ -83,7 +77,11 @@ Map the quiz onto the tool:
 - Do not mark, recommend, or otherwise distinguish the correct option.
 - On Claude Code, use a short `header` chip and put any extra option detail in `description` if the label must stay short.
 
-If the host limits how many questions may be sent in one call, send the rest in follow-up calls. Do not grade, hint, or comment on correctness until every question has an answer.
+Keep the full count for the change: 5, 8, or up to 12. The size comes from the scope of the change, never from what fits in one tool call.
+
+If the host caps how many questions a single call may carry, split the quiz across consecutive calls and keep going until all of them have been asked. Claude Code's `AskUserQuestion` takes at most four questions per call, so an 8-question quiz is two calls and a 12-question quiz is three. Do not re-explain the plan between calls, and do not wait for a chat message from the developer to continue.
+
+Do not grade, hint, or comment on correctness until every question has an answer.
 
 If the structured question tool is unavailable, present the same options in chat and accept a plain-language selection. Still do not require letter codes.
 
@@ -144,15 +142,15 @@ If every answer is correct:
 
 ### Blocking
 
-If any answer is incorrect:
+If any answer is incorrect, teach first and ask second. The remediation turn has the same shape as the original gate, including the one-turn rule: explanation as visible text, then the follow-up questions before the turn ends. Do not stop after the explanation to see whether the developer wants to retry.
 
 1. State `Quiz Gate: BLOCKED`.
-2. Identify the misunderstood concept.
-3. Explain that concept briefly.
-4. Ask a new multiple-choice question through the same structured question UI, testing the same concept through a different scenario.
-5. Do not repeat the original wording.
+2. Name each concept the developer missed.
+3. Explain that concept properly before asking anything else. Say what the correct understanding is, and why the answer they picked does not hold here. Give the developer enough to reason it out themselves next time, not a one-line correction — this is a second teaching step, not a grading note.
+4. Then re-quiz the missed concepts through the same structured question UI, with roughly two or three new questions per missed concept. Several angles on the same idea show whether the explanation landed; a single replacement question can be cleared by a lucky guess.
+5. Write genuinely new questions. Change the scenario, the framing, and the options. Never re-ask a question the developer has already seen, and never reuse the option set from a question whose answer key is now known.
 
-Continue targeted remediation until every tested concept has been answered correctly at least once.
+Continue this loop until every tested concept has been answered correctly. If the developer misses the follow-ups too, explain the concept again from a different starting point, then ask again with another fresh set.
 
 Do not retest concepts the developer has already passed unless later answers reveal a contradictory understanding.
 
@@ -168,7 +166,7 @@ If a selected answer conflicts with the developer's accompanying explanation or 
 
 1. Do not pass that concept yet.
 2. Point out the apparent contradiction.
-3. Ask one short scenario question testing the same concept.
+3. Ask one short scenario question testing the same concept, in the same turn as that observation.
 4. Pass the concept only after the contradiction is resolved.
 
 Do not require written explanations for every answer by default. Quiz Gate should add useful friction, not turn every change into an interview.
@@ -209,8 +207,8 @@ If implementation reveals a material architectural change:
 
 1. Pause before making that change.
 2. Explain why the original plan must change.
-3. Present the proposed delta as a finished chat reply, without opening a quiz in that turn. That explanation is how the developer learns the new decision.
-4. After the developer continues, open a small Delta Quiz Gate containing 1–3 questions about the new decision.
+3. Write out the proposed delta. That explanation is how the developer learns the new decision.
+4. Open a small Delta Quiz Gate containing 1–3 questions about the new decision, in the same turn as the delta, without waiting for a reply.
 5. Continue only after the delta is passed.
 
 Do not reopen the gate for minor implementation details that do not change the developer's mental model of the system.

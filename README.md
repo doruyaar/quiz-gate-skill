@@ -2,7 +2,7 @@
 
 An Agent Skill for Cursor and Claude Code that treats human understanding as a release criterion.
 
-Before implementing a non-trivial change, the agent first replies with the full decided plan — behavior, responsibilities, control flow, tradeoffs, and failure modes — and stops. That chat reply is how the developer learns the design. Only after they have read it and continued does the agent open the quiz UI. Do not put the plan and the quiz in the same turn; the question widget hides the explanation. The agent stays read-only until the developer passes.
+Before implementing a non-trivial change, the agent writes out the plan it would have written anyway — what it is going to do, how it works, why over the alternative — and then opens the quiz in that same reply. The skill does not impose a plan template; it only requires that the explanation is on screen before the questions are. The plan is how the developer learns the design; the quiz sits right below it, so reading and answering happen in one pass. You never have to ask for the quiz or reply `ready` — the plan and the questions arrive together. The agent stays read-only until the developer passes.
 
 Both tools read the same `SKILL.md` format from the same directory layout, so one copy of `quiz-gate/` works in either.
 
@@ -48,7 +48,9 @@ Remove that frontmatter line if you want the agent to apply the gate on its own 
 | Multi-component feature | 8 |
 | Architectural, security-sensitive, or high-risk | up to 12 |
 
-The agent asks the quiz through Cursor's `AskQuestion` or Claude Code's `AskUserQuestion` UI. Select an option for each question; do not type letter codes. Every answer must be correct to pass. An incorrect answer blocks the gate and triggers a short explanation plus a fresh question on the same concept, phrased through a different scenario.
+The agent asks the quiz through Cursor's `AskQuestion` or Claude Code's `AskUserQuestion` UI. Select an option for each question; do not type letter codes. Every answer must be correct to pass.
+
+An incorrect answer blocks the gate and starts a teach-then-retest loop: the agent first explains the concept you missed and why your answer does not hold, then asks two or three new questions on that concept — different scenarios and different options, never a repeat of a question you have already seen. The loop continues until every missed concept is answered correctly.
 
 ## Portability note
 
